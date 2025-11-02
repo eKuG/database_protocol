@@ -6,9 +6,6 @@ import (
 )
 
 // Advanced Performance Optimizations for Production Use
-// ======================================================
-// This file contains advanced optimization techniques that can be
-// integrated into the main protocol implementation for extreme performance.
 
 // BufferPool manages a pool of byte buffers to reduce allocations
 type BufferPool struct {
@@ -79,8 +76,8 @@ func (e *OptimizedEncoder) WriteVarintFast(v uint64) {
 		return
 	}
 	if v < 16384 {
-		e.buf[e.pos] = byte(v|0x80)
-		e.buf[e.pos+1] = byte(v>>7)
+		e.buf[e.pos] = byte(v | 0x80)
+		e.buf[e.pos+1] = byte(v >> 7)
 		e.pos += 2
 		return
 	}
@@ -101,7 +98,7 @@ func SIMDStringCompare(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
 	}
-	
+
 	// Fast path for small strings
 	if len(a) < 16 {
 		for i := range a {
@@ -161,7 +158,7 @@ func PrefetchData(data []byte) {
 
 // AlignedBuffer ensures memory alignment for SIMD operations
 type AlignedBuffer struct {
-	data []byte
+	data    []byte
 	aligned []byte
 }
 
@@ -169,13 +166,13 @@ type AlignedBuffer struct {
 func NewAlignedBuffer(size int) *AlignedBuffer {
 	// Allocate extra space for alignment
 	data := make([]byte, size+64)
-	
+
 	// Calculate aligned starting position
 	ptr := uintptr(unsafe.Pointer(&data[0]))
 	offset := (64 - ptr%64) % 64
-	
+
 	return &AlignedBuffer{
-		data: data,
+		data:    data,
 		aligned: data[offset : int(offset)+size],
 	}
 }
@@ -197,7 +194,7 @@ func NewBatchEncoder(workers int) *BatchEncoder {
 // EncodeBatch encodes multiple DataInputs in parallel
 func (b *BatchEncoder) EncodeBatch(inputs []interface{}) []string {
 	results := make([]string, len(inputs))
-	
+
 	// For small batches, use sequential processing
 	if len(inputs) < b.workers*2 {
 		for i, input := range inputs {
@@ -209,7 +206,7 @@ func (b *BatchEncoder) EncodeBatch(inputs []interface{}) []string {
 	// Parallel processing for large batches
 	var wg sync.WaitGroup
 	chunkSize := (len(inputs) + b.workers - 1) / b.workers
-	
+
 	for w := 0; w < b.workers; w++ {
 		wg.Add(1)
 		start := w * chunkSize
@@ -217,7 +214,7 @@ func (b *BatchEncoder) EncodeBatch(inputs []interface{}) []string {
 		if end > len(inputs) {
 			end = len(inputs)
 		}
-		
+
 		go func(start, end int) {
 			defer wg.Done()
 			for i := start; i < end; i++ {
@@ -225,7 +222,7 @@ func (b *BatchEncoder) EncodeBatch(inputs []interface{}) []string {
 			}
 		}(start, end)
 	}
-	
+
 	wg.Wait()
 	return results
 }
@@ -254,70 +251,9 @@ func NewLockFreeRingBuffer(capacity uint64) *LockFreeRingBuffer {
 		v++
 		capacity = v
 	}
-	
+
 	return &LockFreeRingBuffer{
 		buffer:   make([]interface{}, capacity),
 		capacity: capacity,
 	}
 }
-
-// Optimizations Summary
-// ====================
-//
-// 1. Memory Pooling
-//    - Reduces GC pressure by 80-90%
-//    - Eliminates allocation overhead for small messages
-//
-// 2. SIMD Operations (requires assembly implementation)
-//    - 4-8x faster string comparison
-//    - Parallel byte processing
-//    - CPU cache optimization
-//
-// 3. Zero-Copy Operations
-//    - Eliminates memory copies for string/byte conversions
-//    - Reduces memory bandwidth usage by 50%
-//
-// 4. Batch Processing
-//    - Parallel encoding/decoding
-//    - Improves throughput for bulk operations
-//
-// 5. Lock-Free Data Structures
-//    - Eliminates contention in high-concurrency scenarios
-//    - Better scaling on multi-core systems
-//
-// 6. Memory Alignment
-//    - Enables SIMD operations
-//    - Reduces cache line splits
-//    - Improves memory access patterns
-//
-// 7. Unrolled Loops
-//    - Reduces branch prediction misses
-//    - Better instruction pipelining
-//
-// Production Integration
-// =====================
-//
-// To integrate these optimizations:
-//
-// 1. Replace standard encoder with OptimizedEncoder
-// 2. Enable buffer pooling globally
-// 3. Use batch processing for bulk operations
-// 4. Implement SIMD operations in assembly for target architecture
-// 5. Profile and measure impact before enabling unsafe optimizations
-//
-// Performance Gains
-// ================
-//
-// With all optimizations enabled:
-// - 3-5x reduction in memory allocations
-// - 2-3x improvement in throughput
-// - 50-70% reduction in GC pause times
-// - 10-20% reduction in CPU usage
-//
-// Trade-offs
-// ==========
-//
-// - Code complexity increases
-// - Unsafe operations require careful testing
-// - Platform-specific optimizations reduce portability
-// - Debugging becomes more challenging
