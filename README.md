@@ -160,7 +160,7 @@ Based on testing with various data structures:
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/eKuG/database_protocol
 cd protocol-solution
 
 # Run tests
